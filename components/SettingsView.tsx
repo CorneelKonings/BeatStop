@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { GameSettings, Theme } from '../types';
-import { Settings, Music, Clock, PlayCircle, Palette, Shuffle, Radio, Key, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Music, Clock, PlayCircle, Palette, Shuffle, Radio, Key, ChevronDown, ChevronUp, Info } from 'lucide-react';
 
 interface Props {
   settings: GameSettings;
@@ -16,7 +16,7 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
     setSettings({ ...settings, [key]: value });
   };
 
-  const hasToken = settings.spotifyToken && settings.spotifyToken.length > 0;
+  const hasToken = settings.spotifyToken && settings.spotifyToken.length > 5;
 
   return (
     <div className="flex flex-col h-full bg-slate-950 p-6 overflow-y-auto pb-40">
@@ -28,8 +28,8 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
           </div>
         </div>
         <h1 className="text-5xl font-game tracking-tighter text-white mt-6 bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400">BEATSTOP</h1>
-        <div className="bg-blue-600 px-4 py-1.5 rounded-full mt-2 shadow-lg shadow-blue-900/40 animate-pulse">
-          <p className="text-white font-black text-[12px] tracking-[0.2em] uppercase">STOELENDANS MASTER</p>
+        <div className="bg-slate-800 px-4 py-1.5 rounded-full mt-2 border border-white/10 shadow-lg">
+          <p className="text-slate-400 font-black text-[10px] tracking-[0.2em] uppercase">Smart Music Controller</p>
         </div>
       </div>
 
@@ -37,7 +37,7 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
         {/* Playlist Link */}
         <div className="glass p-5 rounded-3xl space-y-3 shadow-xl">
           <label className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-            <Music className="w-3 h-3 text-blue-500" /> Spotify Playlist Link
+            <Music className="w-3 h-3 text-blue-500" /> Spotify Bron
           </label>
           <input
             type="text"
@@ -51,11 +51,11 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
         {/* Timings */}
         <div className="glass p-5 rounded-3xl space-y-4 shadow-xl border-l-4 border-blue-500">
           <label className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-            <Clock className="w-3 h-3 text-blue-500" /> Stoelendans Timing (sec)
+            <Clock className="w-3 h-3 text-blue-500" /> Interval Instellingen (sec)
           </label>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
-              <span className="text-[9px] font-bold text-slate-600 uppercase">Minimaal Spelen</span>
+              <span className="text-[9px] font-bold text-slate-600 uppercase">Min. Muziek</span>
               <input
                 type="number"
                 value={settings.minStopSeconds}
@@ -64,7 +64,7 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
               />
             </div>
             <div className="space-y-1">
-              <span className="text-[9px] font-bold text-slate-600 uppercase">Maximaal Spelen</span>
+              <span className="text-[9px] font-bold text-slate-600 uppercase">Max. Muziek</span>
               <input
                 type="number"
                 value={settings.maxStopSeconds}
@@ -72,10 +72,6 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
                 className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white text-center font-bold"
               />
             </div>
-          </div>
-          <div className="flex items-start gap-2 bg-blue-500/10 p-3 rounded-xl border border-blue-500/20">
-            <Info className="w-4 h-4 text-blue-400 mt-0.5 shrink-0" />
-            <p className="text-[10px] text-blue-300 leading-tight">De muziek stopt automatisch op een willekeurig moment tussen deze twee tijden.</p>
           </div>
         </div>
 
@@ -88,8 +84,8 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
             <div className="flex items-center gap-2">
               <Key className={`w-4 h-4 ${hasToken ? 'text-green-500' : 'text-slate-400'}`} />
               <div className="text-left">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Spotify API Key</span>
-                <span className="text-[9px] text-slate-500 uppercase font-bold">{hasToken ? 'ACTIEF IN CODE' : 'NIET INGESTELD (GEBRUIKT SCRAPER)'}</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Spotify Token Status</span>
+                <span className="text-[9px] text-slate-500 uppercase font-bold">{hasToken ? 'TOKEN ACTIEF (CODE)' : 'GEEN TOKEN (BEPERKTE MODUS)'}</span>
               </div>
             </div>
             {showAdvanced ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
@@ -98,42 +94,41 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
           {showAdvanced && (
             <div className="p-5 pt-0 space-y-4 animate-in fade-in slide-in-from-top-2">
               <p className="text-[10px] text-slate-500 leading-relaxed italic">
-                Je kunt de API Key direct in <b>App.tsx</b> plakken bij <code>HARDCODED_SPOTIFY_TOKEN</code> of hieronder invullen.
+                De token is momenteel geladen vanuit <b>config.ts</b>. Je kunt hem hieronder handmatig overschrijven voor deze sessie.
               </p>
               <input
                 type="password"
                 value={settings.spotifyToken || ''}
                 onChange={(e) => updateSetting('spotifyToken', e.target.value)}
-                placeholder="Plak hier je Spotify Token..."
+                placeholder="Overschrijf token..."
                 className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-white text-xs placeholder:text-slate-700 outline-none focus:border-blue-500"
               />
             </div>
           )}
         </div>
 
-        {/* Stoelendans Mode Switch */}
+        {/* Stop Systeem */}
         <div className="glass p-5 rounded-3xl space-y-3 shadow-xl">
           <label className="flex items-center gap-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-            <PlayCircle className="w-3 h-3 text-blue-500" /> Ronde Systeem
+            <PlayCircle className="w-3 h-3 text-blue-500" /> Stop Systeem
           </label>
           <div className="flex gap-2 p-1 bg-black/40 rounded-2xl border border-white/5">
             <button
               onClick={() => updateSetting('autoResume', false)}
-              className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${!settings.autoResume ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${!settings.autoResume ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
             >
-              HANDMATIG (STOELENDANS)
+              HANDMATIG DOORGAAN
             </button>
             <button
               onClick={() => updateSetting('autoResume', true)}
-              className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${settings.autoResume ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-500 hover:text-slate-300'}`}
+              className={`flex-1 py-3 rounded-xl text-xs font-black transition-all ${settings.autoResume ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
             >
-              AUTOMATISCH
+              AUTO-RESUME
             </button>
           </div>
-          <p className="text-[9px] text-center text-slate-600 font-bold uppercase">Bij handmatig moet de spelleider op 'Volgende Ronde' klikken.</p>
         </div>
 
-        {/* Shuffle & Kerst */}
+        {/* Opties */}
         <div className="grid grid-cols-2 gap-4 pb-10">
            <button 
              onClick={() => updateSetting('shuffle', !settings.shuffle)}
@@ -154,7 +149,7 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
            >
              <div className="flex flex-col items-start gap-1">
                <Palette className={`w-4 h-4 ${settings.theme === Theme.CHRISTMAS ? 'text-red-400' : 'text-slate-600'}`} />
-               <span className="text-[9px] font-black uppercase">Kerst Thema</span>
+               <span className="text-[9px] font-black uppercase">Feest Modus</span>
              </div>
              <div className={`w-10 h-6 rounded-full p-1 transition-colors ${settings.theme === Theme.CHRISTMAS ? 'bg-red-600' : 'bg-slate-800'}`}>
                <div className={`w-4 h-4 bg-white rounded-full transition-transform ${settings.theme === Theme.CHRISTMAS ? 'translate-x-4' : 'translate-x-0'}`} />
@@ -168,7 +163,7 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
           onClick={onStart}
           className="w-full max-w-md bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-game text-2xl py-6 rounded-[32px] shadow-2xl shadow-blue-900/50 transition-all uppercase tracking-widest border-t border-white/20"
         >
-          START STOELENDANS
+          START BEATSTOP
         </button>
       </div>
     </div>

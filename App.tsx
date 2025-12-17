@@ -3,23 +3,17 @@ import React, { useState } from 'react';
 import { GameSettings, Theme } from './types';
 import SettingsView from './components/SettingsView';
 import GameView from './components/GameView';
-
-/**
- * 🔑 SPOTIFY API KEY (CLIENT ACCESS TOKEN)
- * Plak hier je token als je de officiële API wilt gebruiken.
- * Je kunt een tijdelijke token ophalen op: https://developer.spotify.com/documentation/web-api/reference/get-playlist
- */
-const HARDCODED_SPOTIFY_TOKEN = ""; 
+import { SPOTIFY_CONFIG } from './config';
 
 const DEFAULT_SETTINGS: GameSettings = {
-  minStopSeconds: 10,  // Ideaal voor stoelendans
-  maxStopSeconds: 30,  // Houdt het spannend
-  pauseDuration: 5,    // Alleen relevant bij autoResume
-  autoResume: false,   // STANDAARD STOELENDANS: Handmatig starten voor de volgende ronde
+  minStopSeconds: 15,
+  maxStopSeconds: 45,
+  pauseDuration: 5,
+  autoResume: false, 
   shuffle: true,
   theme: Theme.STANDARD,
-  playlistUrl: 'https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M',
-  spotifyToken: HARDCODED_SPOTIFY_TOKEN 
+  playlistUrl: SPOTIFY_CONFIG.DEFAULT_PLAYLIST,
+  spotifyToken: SPOTIFY_CONFIG.TOKEN
 };
 
 const App: React.FC = () => {
