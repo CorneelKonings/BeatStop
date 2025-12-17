@@ -3,12 +3,10 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const CLIENT_ID = "c041bc323d854084a3b6d9212270a7f0";
 const CLIENT_SECRET = "8c3c6a2ddd3440a6b3ced573ebef65cf";
+const REDIRECT_URI = "https://beat-stop.vercel.app/api/callback";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const code = req.query.code as string;
-  const host = req.headers.host;
-  const protocol = host?.includes('localhost') ? 'http' : 'https';
-  const REDIRECT_URI = `${protocol}://${host}/api/callback`;
 
   if (!code) {
     return res.redirect('/?error=no_code');
