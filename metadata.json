@@ -1,0 +1,7 @@
+{
+  "name": "BeatStop",
+  "description": "De ultieme stoelendans-app met automatische muziekstops en Spotify-integratie.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
