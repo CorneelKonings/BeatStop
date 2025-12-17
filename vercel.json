@@ -2,6 +2,9 @@
 {
   "framework": "vite",
   "rewrites": [
+    { "source": "/api/login", "destination": "/api/login" },
+    { "source": "/api/callback", "destination": "/api/callback" },
+    { "source": "/api/(.*)", "destination": "/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

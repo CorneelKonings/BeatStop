@@ -19,7 +19,7 @@ export interface GameSettings {
   shuffle: boolean;
   theme: Theme;
   playlistUrl: string;
-  spotifyToken?: string; // Toegevoegd voor eigen API key
+  spotifyToken: string;
 }
 
 export interface Track {
@@ -28,4 +28,10 @@ export interface Track {
   artist: string;
   previewUrl: string | null;
   albumArt: string;
+  uri?: string;
+}
+
+export interface SpotifyUser {
+  display_name: string;
+  images: { url: string }[];
 }

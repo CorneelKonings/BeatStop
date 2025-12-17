@@ -1,10 +1,9 @@
 
 /**
- * 🔑 SPOTIFY API TOEGANGSCODE
- * Plak hier je Client Access Token.
- * Haal een token op via: https://developer.spotify.com/documentation/web-api/concepts/access-token
+ * 🔑 BEATSTOP CONFIGURATIE
+ * De Client Secret staat nu veilig in de serverless functie (api/spotify-token.ts).
  */
 export const SPOTIFY_CONFIG = {
-  TOKEN: "JOUW_SPOTIFY_TOKEN_HIER", 
-  DEFAULT_PLAYLIST: "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M"
+  DEFAULT_PLAYLIST: "https://open.spotify.com/playlist/37i9dQZF1DX0Yxoavh5qJV?si=jvC-TlKqSgWlfayQzqKHiA",
+  CLIENT_ID: "c041bc323d854084a3b6d9212270a7f0"
 };
