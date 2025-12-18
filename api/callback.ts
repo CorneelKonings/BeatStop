@@ -1,5 +1,6 @@
-
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+// Fix: Import Buffer explicitly to provide type definitions for Node.js environment
+import { Buffer } from 'buffer';
 
 const CLIENT_ID = "c041bc323d854084a3b6d9212270a7f0";
 const CLIENT_SECRET = "8c3c6a2ddd3440a6b3ced573ebef65cf";
@@ -13,7 +14,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const authHeader = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
+    // Fix: Explicitly using Buffer from 'buffer' package to satisfy TypeScript compiler
+    const authHeader = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
+    
     const response = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: {

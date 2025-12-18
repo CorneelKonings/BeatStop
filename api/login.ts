@@ -14,7 +14,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     'user-modify-playback-state'
   ].join(' ');
 
-  const spotifyUrl = `https://accounts.spotify.com/authorize?response_type=code&client_id=${CLIENT_ID}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
+  const spotifyUrl = new URL('https://accounts.spotify.com/authorize');
+  spotifyUrl.searchParams.append('response_type', 'code');
+  spotifyUrl.searchParams.append('client_id', CLIENT_ID);
+  spotifyUrl.searchParams.append('scope', scopes);
+  spotifyUrl.searchParams.append('redirect_uri', REDIRECT_URI);
   
-  res.redirect(spotifyUrl);
+  res.redirect(spotifyUrl.toString());
 }
