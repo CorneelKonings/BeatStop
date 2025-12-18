@@ -12,6 +12,11 @@ export enum Theme {
   CIRCUS = 'CIRCUS'
 }
 
+export enum MusicMode {
+  SPOTIFY_PREMIUM = 'SPOTIFY_PREMIUM',
+  LOCAL_UPLOAD = 'LOCAL_UPLOAD'
+}
+
 export interface SpotifyUser {
   display_name: string;
   images: { url: string }[];
@@ -21,7 +26,7 @@ export interface Track {
   id: string;
   name: string;
   artist: string;
-  previewUrl: string | null;
+  previewUrl: string | null; // Dit wordt de Blob URL voor uploads
   albumArt: string;
   uri: string;
 }
@@ -35,4 +40,6 @@ export interface GameSettings {
   playlistUrl: string;
   spotifyToken: string;
   shuffle: boolean;
+  musicMode: MusicMode;
+  localTracks: Track[]; // Nieuwe opslag voor geüploade bestanden
 }

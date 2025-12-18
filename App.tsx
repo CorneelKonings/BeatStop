@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { GameSettings, Theme } from './types';
+import { GameSettings, Theme, MusicMode } from './types';
 import SettingsView from './components/SettingsView';
 import GameView from './components/GameView';
 import { SPOTIFY_CONFIG } from './config';
@@ -13,7 +13,9 @@ const DEFAULT_SETTINGS: GameSettings = {
   theme: Theme.STANDARD,
   playlistUrl: SPOTIFY_CONFIG.DEFAULT_PLAYLIST,
   spotifyToken: '',
-  shuffle: true
+  shuffle: true,
+  musicMode: MusicMode.LOCAL_UPLOAD,
+  localTracks: []
 };
 
 const App: React.FC = () => {
@@ -24,7 +26,7 @@ const App: React.FC = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
     if (token) {
-      setSettings(prev => ({ ...prev, spotifyToken: token }));
+      setSettings(prev => ({ ...prev, spotifyToken: token, musicMode: MusicMode.SPOTIFY_PREMIUM }));
       window.history.replaceState({}, document.title, "/");
     }
   }, []);
@@ -40,7 +42,8 @@ const App: React.FC = () => {
       ) : (
         <GameView 
           settings={settings} 
-          onExit={() => setInGame(false)} 
+          onExit={() => setInGame(false)}
+          setSettings={setSettings}
         />
       )}
     </div>
