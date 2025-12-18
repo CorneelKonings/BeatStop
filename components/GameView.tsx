@@ -1,13 +1,20 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GameSettings, GameState, Track, Theme } from '../types';
-import { fetchPlaylistTracks } from '../services/spotifyService';
-import { Play, Pause, ChevronLeft, AlertCircle, Loader2, Music, Volume2 } from 'lucide-react';
+import { fetchPlaylistTracks, playTrackOnDevice } from '../services/spotifyService';
+import { Play, Pause, ChevronLeft, AlertCircle, Loader2, Music, Volume2, ShieldAlert } from 'lucide-react';
 import Snowfall from './Snowfall';
 
 interface Props {
   settings: GameSettings;
   onExit: () => void;
+}
+
+declare global {
+  interface Window {
+    onSpotifyWebPlaybackSDKReady: () => void;
+    Spotify: any;
+  }
 }
 
 const GameView: React.FC<Props> = ({ settings, onExit }) => {
@@ -17,10 +24,53 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [autoResumeTimeLeft, setAutoResumeTimeLeft] = useState<number | null>(null);
+  const [isPremium, setIsPremium] = useState(true);
+  
+  // SDK States
+  const [player, setPlayer] = useState<any>(null);
+  const [deviceId, setDeviceId] = useState<string | null>(null);
+  const [isPlayerReady, setIsPlayerReady] = useState(false);
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const stopTimerRef = useRef<any>(null);
 
+  // 1. Initialiseer Spotify Player SDK
+  useEffect(() => {
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      const newPlayer = new window.Spotify.Player({
+        name: 'BeatStop Game Player',
+        getOAuthToken: (cb: any) => { cb(settings.spotifyToken); },
+        volume: 0.8
+      });
+
+      newPlayer.addListener('ready', ({ device_id }: { device_id: string }) => {
+        console.log('Ready with Device ID', device_id);
+        setDeviceId(device_id);
+        setIsPlayerReady(true);
+      });
+
+      newPlayer.addListener('not_ready', ({ device_id }: { device_id: string }) => {
+        console.log('Device ID has gone offline', device_id);
+      });
+
+      newPlayer.addListener('initialization_error', ({ message }: any) => { console.error(message); });
+      newPlayer.addListener('authentication_error', ({ message }: any) => { 
+        setError("Spotify login mislukt. Log opnieuw in."); 
+      });
+      newPlayer.addListener('account_error', ({ message }: any) => { 
+        setIsPremium(false);
+        setError("Spotify Premium is vereist voor volledige nummers.");
+      });
+
+      newPlayer.connect();
+      setPlayer(newPlayer);
+    };
+
+    return () => {
+      if (player) player.disconnect();
+    };
+  }, [settings.spotifyToken]);
+
+  // 2. Laad Tracks
   useEffect(() => {
     const load = async () => {
       try {
@@ -37,21 +87,19 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
   }, [settings.playlistUrl, settings.shuffle, settings.spotifyToken]);
 
   const nextTrack = useCallback(() => {
-    setCurrentTrackIndex(prev => (prev + 1) % tracks.length);
-  }, [tracks.length]);
+    const nextIdx = (currentTrackIndex + 1) % tracks.length;
+    setCurrentTrackIndex(nextIdx);
+    if (deviceId && isPlayerReady) {
+       playTrackOnDevice(settings.spotifyToken, deviceId, tracks[nextIdx].uri);
+    }
+  }, [tracks, currentTrackIndex, deviceId, isPlayerReady, settings.spotifyToken]);
 
-  const handleAudioError = () => {
-    console.warn("Audio track kon niet laden, we skippen naar het volgende nummer...");
-    nextTrack();
-  };
-
-  const stopMusic = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
+  const stopMusic = useCallback(async () => {
+    if (player) {
+      await player.pause();
     }
     if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
     
-    // Sirene geluid
     const sfxUrl = settings.theme === Theme.CHRISTMAS 
         ? 'https://actions.google.com/sounds/v1/alarms/bugle_tune.ogg' 
         : 'https://actions.google.com/sounds/v1/emergency/emergency_siren_short_burst.ogg';
@@ -65,7 +113,7 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
     } else {
       setGameState(GameState.PAUSED_MANUAL);
     }
-  }, [settings.autoResume, settings.pauseDuration, settings.theme]);
+  }, [player, settings.autoResume, settings.pauseDuration, settings.theme]);
 
   const scheduleNextStop = useCallback(() => {
     const duration = Math.floor(Math.random() * (settings.maxStopSeconds - settings.minStopSeconds + 1)) + settings.minStopSeconds;
@@ -75,17 +123,25 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
     }, duration * 1000);
   }, [settings.maxStopSeconds, settings.minStopSeconds, stopMusic]);
 
-  const startMusic = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = 1.0;
-      audioRef.current.play().catch(e => {
-        console.error("Play blocked", e);
-        setError("Browser blokkeert audio. Klik eerst op het scherm.");
-      });
+  const startMusic = useCallback(async () => {
+    if (!player || !isPlayerReady || !deviceId) return;
+
+    try {
+      if (gameState === GameState.IDLE) {
+        // Eerste keer afspelen: forceer track via API naar de SDK device
+        await playTrackOnDevice(settings.spotifyToken, deviceId, tracks[currentTrackIndex].uri);
+      } else {
+        // Hervatten van pauze
+        await player.resume();
+      }
+      
       setGameState(GameState.PLAYING);
       scheduleNextStop();
+    } catch (e) {
+      console.error(e);
+      setError("Kon muziek niet starten. Check of je Spotify Premium hebt.");
     }
-  }, [scheduleNextStop]);
+  }, [player, isPlayerReady, deviceId, gameState, tracks, currentTrackIndex, settings.spotifyToken, scheduleNextStop]);
 
   useEffect(() => {
     if (gameState === GameState.PAUSED_AUTO && autoResumeTimeLeft !== null) {
@@ -104,29 +160,23 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
     return 'bg-slate-900';
   };
 
-  const getStatusText = () => {
-    switch (gameState) {
-      case GameState.IDLE: return 'READY?';
-      case GameState.PLAYING: return 'BEAT!';
-      default: return 'STOP';
-    }
-  };
-
-  if (isLoading) {
+  if (isLoading || !isPlayerReady) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-slate-950">
         <Loader2 className="w-16 h-16 text-green-500 animate-spin mb-6" />
-        <p className="font-black text-green-500/60 uppercase tracking-[0.4em] text-xs">Spotify Tracks Laden...</p>
+        <p className="font-black text-green-500/60 uppercase tracking-[0.4em] text-xs">Spotify Player Verbinden...</p>
       </div>
     );
   }
 
-  if (error) {
+  if (error || !isPremium) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-slate-900 p-10 text-center">
-        <AlertCircle className="w-20 h-20 text-red-500 mb-6 opacity-20" />
-        <h2 className="text-3xl font-game mb-4">FOUTJE</h2>
-        <p className="text-slate-400 font-bold mb-10 text-sm leading-relaxed">{error}</p>
+        {!isPremium ? <ShieldAlert className="w-20 h-20 text-orange-500 mb-6" /> : <AlertCircle className="w-20 h-20 text-red-500 mb-6 opacity-20" />}
+        <h2 className="text-3xl font-game mb-4">{!isPremium ? 'PREMIUM NODIG' : 'FOUTJE'}</h2>
+        <p className="text-slate-400 font-bold mb-10 text-sm leading-relaxed">
+          {error || "De Spotify Player vereist een Premium account om volledige nummers af te spelen."}
+        </p>
         <button onClick={onExit} className="w-full max-w-xs glass py-5 rounded-2xl font-black uppercase tracking-widest text-xs">TERUG NAAR MENU</button>
       </div>
     );
@@ -146,7 +196,7 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
           <h2 className="font-game text-2xl tracking-tighter text-white drop-shadow-xl italic">BEATSTOP</h2>
         </div>
         <div className="w-14 h-14 flex items-center justify-center">
-           <Volume2 className="text-white/20 w-6 h-6" />
+           <div className={`w-3 h-3 rounded-full ${isPlayerReady ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} title="SDK Status" />
         </div>
       </div>
 
@@ -170,7 +220,7 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
           </div>
 
           <h1 className="text-8xl font-game mb-4 tracking-tighter text-white drop-shadow-2xl uppercase italic">
-            {getStatusText()}
+            {gameState === GameState.IDLE ? 'READY?' : (gameState === GameState.PLAYING ? 'BEAT!' : 'STOP')}
           </h1>
           
           <div className="h-10">
@@ -183,7 +233,6 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
         </div>
       </div>
 
-      {/* Track Info Card */}
       <div className="px-8 py-4 z-10">
          <div className="glass p-5 rounded-[40px] flex items-center gap-5 border-t border-white/10 shadow-2xl">
             <div className={`w-14 h-14 rounded-2xl bg-black/40 flex items-center justify-center ${gameState === GameState.PLAYING ? 'animate-pulse' : ''}`}>
@@ -197,19 +246,12 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
       </div>
 
       <div className="p-8 z-20 pb-20">
-        {gameState === GameState.IDLE ? (
+        {gameState === GameState.IDLE || gameState === GameState.PAUSED_MANUAL ? (
           <button
             onClick={startMusic}
             className="w-full bg-[#1DB954] text-black py-8 rounded-[40px] font-game text-3xl shadow-2xl active:scale-95 transition-all uppercase tracking-tighter border-t-4 border-green-400"
           >
-            START MUZIEK
-          </button>
-        ) : (gameState === GameState.PAUSED_MANUAL) ? (
-          <button
-            onClick={startMusic}
-            className="w-full bg-white text-black py-8 rounded-[40px] font-game text-3xl shadow-2xl flex items-center justify-center gap-4 active:scale-95 transition-all uppercase tracking-tighter"
-          >
-            VERDER GAAN
+            {gameState === GameState.IDLE ? 'START MUZIEK' : 'VERDER GAAN'}
           </button>
         ) : (
           <div className="h-28 flex items-center justify-center">
@@ -228,15 +270,6 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
           </div>
         )}
       </div>
-
-      <audio 
-        ref={audioRef} 
-        src={currentTrack.previewUrl || ''} 
-        onEnded={nextTrack}
-        onError={handleAudioError}
-        preload="auto"
-        hidden
-      />
     </div>
   );
 };

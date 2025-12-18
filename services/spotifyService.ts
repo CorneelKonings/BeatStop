@@ -23,7 +23,7 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
   const id = parsePlaylistId(playlistUrl);
   
   if (!id) {
-    throw new Error('Ongeldige Spotify link. Plak een link zoals: https://open.spotify.com/playlist/...');
+    throw new Error('Ongeldige Spotify link.');
   }
 
   try {
@@ -34,36 +34,38 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
       }
     });
     
-    if (response.status === 401) {
-      throw new Error('Je sessie is verlopen. Log opnieuw in.');
-    }
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || 'Kon playlist niet ophalen.');
-    }
+    if (response.status === 401) throw new Error('Sessie verlopen.');
+    if (!response.ok) throw new Error('Kon playlist niet laden.');
 
     const data = await response.json();
     
-    // CRUCIAAL: We filteren op preview_url. Alleen deze nummers kunnen we afspelen.
-    const playableTracks = data.items
-      .filter((item: any) => item.track && item.track.id && item.track.preview_url)
+    // We filteren niet meer op preview_url, want we gaan de volledige URI afspelen via de SDK.
+    return data.items
+      .filter((item: any) => item.track && item.track.id)
       .map((item: any) => ({
         id: item.track.id,
         name: item.track.name,
         artist: item.track.artists.map((a: any) => a.name).join(', '),
-        previewUrl: item.track.preview_url,
+        previewUrl: item.track.preview_url, // fallback
         albumArt: item.track.album.images[0]?.url || `https://picsum.photos/seed/${item.track.id}/400/400`,
         uri: item.track.uri
       }));
-
-    if (playableTracks.length === 0) {
-      throw new Error('Geen afspeelbare nummers gevonden in deze playlist (Spotify beperkt previews). Probeer een andere playlist.');
-    }
-
-    return playableTracks;
   } catch (err: any) {
     console.error('Spotify API Error:', err);
     throw err;
   }
+};
+
+/**
+ * Start een specifieke track op een specifiek apparaat (de SDK player)
+ */
+export const playTrackOnDevice = async (token: string, deviceId: string, trackUri: string) => {
+  await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ uris: [trackUri] }),
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+  });
 };

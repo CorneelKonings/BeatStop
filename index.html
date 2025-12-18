@@ -6,11 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BeatStop | Smart Music Controller</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://sdk.scdn.co/spotify-player.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         
         :root {
-            --brand-primary: #3b82f6;
+            --brand-primary: #1DB954;
             --brand-danger: #ef4444;
             --brand-success: #22c55e;
         }
@@ -65,6 +66,11 @@
         }
         @keyframes shake {
             50% { transform: translateX(50px); }
+        }
+
+        @keyframes pulse {
+            from { height: 15%; }
+            to { height: 100%; }
         }
     </style>
 <script type="importmap">
