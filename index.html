@@ -29,14 +29,12 @@
             font-family: 'Bungee', cursive;
         }
 
-        /* Glassmorphism */
         .glass {
             background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        /* Animations */
         @keyframes pulse-ring {
             0% { transform: scale(0.33); opacity: 0; }
             80%, 100% { opacity: 0; }
@@ -54,7 +52,6 @@
             animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
         }
 
-        /* Snow effect */
         .snowflake {
             color: #fff;
             position: fixed;
@@ -74,13 +71,16 @@
 {
   "imports": {
     "react": "https://esm.sh/react@^19.2.3",
+    "react-dom": "https://esm.sh/react-dom@^19.2.3",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
     "react/": "https://esm.sh/react@^19.2.3/",
     "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "clsx": "https://esm.sh/clsx@^2.1.1",
+    "tailwind-merge": "https://esm.sh/tailwind-merge@^2.5.4",
     "@vercel/node": "https://esm.sh/@vercel/node@^5.5.15",
-    "buffer": "https://esm.sh/buffer@^6.0.3"
+    "buffer": "https://esm.sh/buffer@^6.0.3",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>

@@ -1,8 +1,14 @@
 
 import { Track, SpotifyUser } from '../types';
 
+/**
+ * Extraheert het playlist ID uit diverse Spotify URL formats.
+ * Ondersteunt: open.spotify.com/playlist/ID, spotify:playlist:ID, etc.
+ */
 export const parsePlaylistId = (url: string): string | null => {
-  const match = url.match(/playlist[\/:]([a-zA-Z0-9]+)/);
+  if (!url) return null;
+  // Regex die zoekt naar /playlist/ gevolgd door 22 alfanumerieke karakters (standaard Spotify ID lengte)
+  const match = url.match(/playlist[\/:]([a-zA-Z0-9]{22})/);
   return match ? match[1] : null;
 };
 
@@ -20,24 +26,40 @@ export const fetchUserProfile = async (token: string): Promise<SpotifyUser | nul
 
 export const fetchPlaylistTracks = async (playlistUrl: string, token: string): Promise<Track[]> => {
   const id = parsePlaylistId(playlistUrl);
-  if (!id) throw new Error('Geen geldige Spotify link gevonden.');
+  
+  if (!id) {
+    throw new Error('Ongeldige Spotify link. Plak een link zoals: https://open.spotify.com/playlist/...');
+  }
 
   try {
     const response = await fetch(`https://api.spotify.com/v1/playlists/${id}/tracks?limit=50`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: { 
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
     });
     
     if (response.status === 401) {
-      throw new Error('AUTH_EXPIRED');
+      throw new Error('Je sessie is verlopen. Log opnieuw in.');
+    }
+
+    if (response.status === 404) {
+      throw new Error('Playlist niet gevonden. Controleer of de playlist openbaar is.');
     }
 
     if (!response.ok) {
-      throw new Error('Kon playlist niet ophalen. Is deze openbaar?');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || 'Kon playlist niet ophalen.');
     }
 
     const data = await response.json();
-    const tracks = data.items
-      .filter((item: any) => item.track)
+    
+    if (!data.items || data.items.length === 0) {
+      throw new Error('Deze playlist is leeg.');
+    }
+
+    return data.items
+      .filter((item: any) => item.track && item.track.id)
       .map((item: any) => ({
         id: item.track.id,
         name: item.track.name,
@@ -46,14 +68,8 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
         albumArt: item.track.album.images[0]?.url || `https://picsum.photos/seed/${item.track.id}/400/400`,
         uri: item.track.uri
       }));
-
-    if (tracks.length === 0) {
-      throw new Error('Deze playlist is leeg of bevat geen afspeelbare nummers.');
-    }
-
-    return tracks;
   } catch (err: any) {
-    if (err.message === 'AUTH_EXPIRED') throw err;
-    throw new Error(err.message || 'Er is een fout opgetreden bij het laden van Spotify.');
+    console.error('Spotify API Error:', err);
+    throw err;
   }
 };

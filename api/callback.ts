@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-// Fix: Import Buffer explicitly to provide type definitions for Node.js environment
+// Fix: Explicitly import Buffer to satisfy TypeScript compiler in Node.js environment
 import { Buffer } from 'buffer';
 
 const CLIENT_ID = "c041bc323d854084a3b6d9212270a7f0";
@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    // Fix: Explicitly using Buffer from 'buffer' package to satisfy TypeScript compiler
+    // Gebruik de geïmporteerde Buffer van Node.js voor base64 encoding
     const authHeader = Buffer.from(`${CLIENT_ID}:${CLIENT_SECRET}`).toString('base64');
     
     const response = await fetch('https://accounts.spotify.com/api/token', {
@@ -33,7 +33,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const data = await response.json();
 
     if (data.access_token) {
-      // Stuur de gebruiker terug met de token in de URL
       return res.redirect(`/?token=${data.access_token}`);
     } else {
       console.error('Spotify Token Error:', data);
