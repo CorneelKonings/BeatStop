@@ -3,11 +3,9 @@ import { Track, SpotifyUser } from '../types';
 
 /**
  * Extraheert het playlist ID uit diverse Spotify URL formats.
- * Ondersteunt: open.spotify.com/playlist/ID, spotify:playlist:ID, etc.
  */
 export const parsePlaylistId = (url: string): string | null => {
   if (!url) return null;
-  // Regex die zoekt naar /playlist/ gevolgd door 22 alfanumerieke karakters (standaard Spotify ID lengte)
   const match = url.match(/playlist[\/:]([a-zA-Z0-9]{22})/);
   return match ? match[1] : null;
 };
@@ -43,10 +41,6 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
       throw new Error('Je sessie is verlopen. Log opnieuw in.');
     }
 
-    if (response.status === 404) {
-      throw new Error('Playlist niet gevonden. Controleer of de playlist openbaar is.');
-    }
-
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.error?.message || 'Kon playlist niet ophalen.');
@@ -54,12 +48,10 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
 
     const data = await response.json();
     
-    if (!data.items || data.items.length === 0) {
-      throw new Error('Deze playlist is leeg.');
-    }
-
-    return data.items
-      .filter((item: any) => item.track && item.track.id)
+    // CRUCIAAL: Filter op tracks die een preview_url hebben. 
+    // Zonder dit filter probeert de app nummers af te spelen die 'stil' zijn.
+    const playableTracks = data.items
+      .filter((item: any) => item.track && item.track.id && item.track.preview_url)
       .map((item: any) => ({
         id: item.track.id,
         name: item.track.name,
@@ -68,6 +60,12 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
         albumArt: item.track.album.images[0]?.url || `https://picsum.photos/seed/${item.track.id}/400/400`,
         uri: item.track.uri
       }));
+
+    if (playableTracks.length === 0) {
+      throw new Error('Deze playlist bevat geen nummers met een audio-preview. Probeer een andere (openbare) playlist.');
+    }
+
+    return playableTracks;
   } catch (err: any) {
     console.error('Spotify API Error:', err);
     throw err;

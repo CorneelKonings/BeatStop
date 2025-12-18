@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GameSettings, GameState, Track, Theme } from '../types';
 import { fetchPlaylistTracks } from '../services/spotifyService';
-import { Play, Pause, ChevronLeft, AlertCircle, Loader2, Music } from 'lucide-react';
+import { Play, Pause, ChevronLeft, AlertCircle, Loader2, Music, Volume2 } from 'lucide-react';
 import Snowfall from './Snowfall';
 
 interface Props {
@@ -36,6 +36,15 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
     load();
   }, [settings.playlistUrl, settings.shuffle, settings.spotifyToken]);
 
+  const nextTrack = useCallback(() => {
+    setCurrentTrackIndex(prev => (prev + 1) % tracks.length);
+  }, [tracks.length]);
+
+  const handleAudioError = () => {
+    console.warn("Audio track kon niet laden, skippen...");
+    nextTrack();
+  };
+
   const stopMusic = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -46,7 +55,7 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
         ? 'https://actions.google.com/sounds/v1/alarms/bugle_tune.ogg' 
         : 'https://actions.google.com/sounds/v1/emergency/emergency_siren_short_burst.ogg';
     const sfx = new Audio(sfxUrl);
-    sfx.volume = 0.5;
+    sfx.volume = 0.6;
     sfx.play().catch(() => {});
 
     if (settings.autoResume) {
@@ -67,7 +76,11 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
 
   const startMusic = useCallback(() => {
     if (audioRef.current) {
-      audioRef.current.play().catch(e => console.error("Play blocked", e));
+      audioRef.current.volume = 1.0;
+      audioRef.current.play().catch(e => {
+        console.error("Play blocked or failed", e);
+        setError("Browser blokkeert audio. Klik ergens op het scherm en probeer opnieuw.");
+      });
       setGameState(GameState.PLAYING);
       scheduleNextStop();
     }
@@ -83,10 +96,6 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
       }
     }
   }, [gameState, autoResumeTimeLeft, startMusic]);
-
-  const nextTrack = () => {
-    setCurrentTrackIndex(prev => (prev + 1) % tracks.length);
-  };
 
   const getStatusColor = () => {
     if (gameState === GameState.PLAYING) return settings.theme === Theme.CHRISTMAS ? 'bg-red-900' : 'bg-blue-900';
@@ -108,7 +117,7 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-slate-950">
         <Loader2 className="w-16 h-16 text-blue-500 animate-spin mb-6" />
-        <p className="font-black text-blue-500/60 uppercase tracking-[0.4em] text-xs">BeatStop laadt tracks...</p>
+        <p className="font-black text-blue-500/60 uppercase tracking-[0.4em] text-xs">Tracks ophalen...</p>
       </div>
     );
   }
@@ -117,9 +126,9 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-slate-900 p-10 text-center">
         <AlertCircle className="w-20 h-20 text-red-500 mb-6 opacity-20" />
-        <h2 className="text-3xl font-game mb-4">ERROR</h2>
+        <h2 className="text-3xl font-game mb-4">OPGELET</h2>
         <p className="text-slate-400 font-bold mb-10 text-sm leading-relaxed">{error}</p>
-        <button onClick={onExit} className="w-full max-w-xs glass py-5 rounded-2xl font-black uppercase tracking-widest text-xs">Terug naar menu</button>
+        <button onClick={onExit} className="w-full max-w-xs glass py-5 rounded-2xl font-black uppercase tracking-widest text-xs">Ander menu / Playlist</button>
       </div>
     );
   }
@@ -137,7 +146,9 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
         <div className="text-center">
           <h2 className="font-game text-2xl tracking-tighter text-white drop-shadow-xl">BEATSTOP</h2>
         </div>
-        <div className="w-14 h-14" />
+        <div className="w-14 h-14 flex items-center justify-center">
+           <Volume2 className="text-white/20 w-6 h-6" />
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-8 z-10 text-center">
@@ -166,11 +177,11 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
           <div className="h-10">
             {gameState === GameState.PAUSED_AUTO ? (
               <p className="text-2xl font-black text-white bg-black/30 px-6 py-2 rounded-full uppercase tracking-tighter animate-bounce">
-                Resuming in {autoResumeTimeLeft}s
+                Verder in {autoResumeTimeLeft}s
               </p>
             ) : (
               <p className="text-xl font-bold text-white/80 uppercase tracking-tight">
-                {gameState === GameState.PLAYING ? 'Music Active' : 'Music Stopped'}
+                {gameState === GameState.PLAYING ? 'Muziek speelt' : 'Muziek gestopt'}
               </p>
             )}
           </div>
@@ -195,14 +206,14 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
             onClick={startMusic}
             className="w-full bg-white text-slate-950 py-8 rounded-[40px] font-game text-3xl shadow-2xl active:scale-95 transition-all uppercase tracking-tighter border-t-4 border-slate-200"
           >
-            PLAY
+            START
           </button>
         ) : (gameState === GameState.PAUSED_MANUAL) ? (
           <button
             onClick={startMusic}
             className="w-full bg-blue-500 text-white py-8 rounded-[40px] font-game text-3xl shadow-2xl flex items-center justify-center gap-4 active:scale-95 transition-all uppercase tracking-tighter border-t-4 border-white/20"
           >
-            RESUME
+            VERDER
           </button>
         ) : (
           <div className="h-28 flex items-center justify-center">
@@ -226,7 +237,8 @@ const GameView: React.FC<Props> = ({ settings, onExit }) => {
         ref={audioRef} 
         src={currentTrack.previewUrl || ''} 
         onEnded={nextTrack}
-        crossOrigin="anonymous"
+        onError={handleAudioError}
+        preload="auto"
         hidden
       />
     </div>
