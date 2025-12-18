@@ -49,10 +49,25 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
     });
   };
 
+  const triggerFileUpload = (e: React.MouseEvent) => {
+    e.preventDefault();
+    fileInputRef.current?.click();
+  };
+
   return (
     <div className={`flex flex-col h-full transition-colors duration-1000 ${settings.theme === Theme.CHRISTMAS ? 'bg-red-950' : 'bg-slate-950'} p-6 overflow-y-auto pb-48 relative`}>
       {settings.theme === Theme.CHRISTMAS && <Snowfall />}
       
+      {/* Verborgen file input buiten de button voor iPad compatibiliteit */}
+      <input 
+        type="file" 
+        ref={fileInputRef} 
+        onChange={handleFileUpload} 
+        multiple 
+        accept=".mp3,.wav,.m4a,.aac,audio/*" 
+        className="fixed opacity-0 pointer-events-none" 
+      />
+
       <div className="flex flex-col items-center mb-8 mt-6 z-10">
         <div className="relative">
           <div className={`absolute -inset-4 rounded-full blur-2xl opacity-20 ${settings.theme === Theme.CHRISTMAS ? 'bg-white' : 'bg-green-500'}`}></div>
@@ -62,6 +77,7 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
       </div>
 
       <div className="space-y-8 max-w-md mx-auto w-full z-10">
+        {/* Modus Selectie */}
         <div className="grid grid-cols-2 gap-2 p-1 bg-white/5 rounded-[28px] glass">
           <button 
             onClick={() => updateSetting('musicMode', MusicMode.SPOTIFY_PREMIUM)}
@@ -79,6 +95,7 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
           </button>
         </div>
 
+        {/* Thema Selectie */}
         <div className="glass p-5 rounded-[32px] space-y-4">
           <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">
             <Palette className="w-3 h-3 text-white" /> Kies Sfeer
@@ -101,6 +118,7 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
           </div>
         </div>
 
+        {/* Music Context */}
         {settings.musicMode === MusicMode.SPOTIFY_PREMIUM ? (
           <div className="space-y-4">
             {!settings.spotifyToken ? (
@@ -121,15 +139,15 @@ const SettingsView: React.FC<Props> = ({ settings, setSettings, onStart }) => {
             )}
           </div>
         ) : (
-          <button onClick={() => fileInputRef.current?.click()} className="btn-3d-wrap h-16">
+          <button onClick={triggerFileUpload} className="btn-3d-wrap h-16">
             <div className="btn-3d-top bg-purple-600 text-white">
                <Upload className="w-5 h-5 mr-3" /> MUZIEK KIEZEN
             </div>
             <div className="btn-3d-bottom bg-purple-900" />
-            <input type="file" ref={fileInputRef} onChange={handleFileUpload} multiple accept="audio/*" className="hidden" />
           </button>
         )}
 
+        {/* Timings */}
         <div className="glass p-5 rounded-[32px] space-y-4">
           <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">
             <Clock className="w-3 h-3 text-green-500" /> Interval (sec)

@@ -22,6 +22,7 @@
             outline: none;
             cursor: pointer;
             width: 100%;
+            -webkit-tap-highlight-color: transparent;
         }
         .btn-3d-top {
             width: 100%;
@@ -31,7 +32,7 @@
             justify-content: center;
             border-radius: 20px;
             outline: 2px solid #111;
-            transition: 0.1s;
+            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             position: relative;
             z-index: 2;
             overflow: hidden;
@@ -52,9 +53,9 @@
             position: absolute;
             content: "";
             width: 2px;
-            height: 20px; /* Hoog genoeg om de top layer te 'raken' */
+            height: 22px; 
             background: #111;
-            top: -10px; /* Starten bovenaan de schaduwlaag */
+            top: -10px; 
         }
         .btn-3d-bottom::before { left: 15%; }
         .btn-3d-bottom::after { left: 85%; }
