@@ -1,9 +1,6 @@
 
 import { Track, SpotifyUser } from '../types';
 
-/**
- * Extraheert het playlist ID uit diverse Spotify URL formats.
- */
 export const parsePlaylistId = (url: string): string | null => {
   if (!url) return null;
   const match = url.match(/playlist[\/:]([a-zA-Z0-9]{22})/);
@@ -48,8 +45,7 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
 
     const data = await response.json();
     
-    // CRUCIAAL: Filter op tracks die een preview_url hebben. 
-    // Zonder dit filter probeert de app nummers af te spelen die 'stil' zijn.
+    // CRUCIAAL: We filteren op preview_url. Alleen deze nummers kunnen we afspelen.
     const playableTracks = data.items
       .filter((item: any) => item.track && item.track.id && item.track.preview_url)
       .map((item: any) => ({
@@ -62,7 +58,7 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
       }));
 
     if (playableTracks.length === 0) {
-      throw new Error('Deze playlist bevat geen nummers met een audio-preview. Probeer een andere (openbare) playlist.');
+      throw new Error('Geen afspeelbare nummers gevonden in deze playlist (Spotify beperkt previews). Probeer een andere playlist.');
     }
 
     return playableTracks;

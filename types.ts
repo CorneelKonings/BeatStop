@@ -8,18 +8,13 @@ export enum GameState {
 
 export enum Theme {
   STANDARD = 'STANDARD',
-  CHRISTMAS = 'CHRISTMAS'
+  CHRISTMAS = 'CHRISTMAS',
+  CIRCUS = 'CIRCUS'
 }
 
-export interface GameSettings {
-  minStopSeconds: number;
-  maxStopSeconds: number;
-  pauseDuration: number;
-  autoResume: boolean;
-  shuffle: boolean;
-  theme: Theme;
-  playlistUrl: string;
-  spotifyToken: string;
+export interface SpotifyUser {
+  display_name: string;
+  images: { url: string }[];
 }
 
 export interface Track {
@@ -28,10 +23,16 @@ export interface Track {
   artist: string;
   previewUrl: string | null;
   albumArt: string;
-  uri?: string;
+  uri: string;
 }
 
-export interface SpotifyUser {
-  display_name: string;
-  images: { url: string }[];
+export interface GameSettings {
+  minStopSeconds: number;
+  maxStopSeconds: number;
+  pauseDuration: number;
+  autoResume: boolean;
+  theme: Theme;
+  playlistUrl: string;
+  spotifyToken: string;
+  shuffle: boolean;
 }
