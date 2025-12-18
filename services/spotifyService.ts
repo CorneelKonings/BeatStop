@@ -6,7 +6,7 @@ export const parsePlaylistId = (url: string): string | null => {
   // Regex die zowel de ID als eventuele query params aanpakt
   const match = url.match(/playlist[\/:]([a-zA-Z0-9]{22})/);
   const id = match ? match[1] : null;
-  console.log('Parsed Playlist ID:', id, 'from URL:', url);
+  console.log('Parsed Playlist ID:', id);
   return id;
 };
 
@@ -26,11 +26,8 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
   const id = parsePlaylistId(playlistUrl);
   if (!id) throw new Error('Ongeldige Spotify link.');
 
-  const endpoint = `https://api.spotify.com/v1/playlists/${id}/tracks?limit=50`;
-  console.log('Fetching tracks from:', endpoint);
-
   try {
-    const response = await fetch(endpoint, {
+    const response = await fetch(`https://api.spotify.com/v1/playlists/${id}/tracks?limit=50`, {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
@@ -38,10 +35,13 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
     });
     
     if (response.status === 404) {
-      throw new Error(`Playlist niet gevonden (404). Check of de link openbaar is.`);
+      throw new Error(`Playlist niet gevonden. Is de link openbaar?`);
     }
     if (response.status === 401) throw new Error('Sessie verlopen. Log opnieuw in.');
-    if (!response.ok) throw new Error(`Spotify Error: ${response.status}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `Spotify Fout: ${response.status}`);
+    }
 
     const data = await response.json();
     if (!data.items || data.items.length === 0) throw new Error('Geen nummers gevonden in deze playlist.');
@@ -71,9 +71,13 @@ export const playTrackOnDevice = async (token: string, deviceId: string, trackUr
       'Authorization': `Bearer ${token}`
     },
   });
+  
   if (!response.ok) {
-    const err = await response.json();
+    const err = await response.json().catch(() => ({}));
     console.error('Play Request Failed:', err);
-    if (err.error?.status === 403) throw new Error('Spotify Premium vereist.');
+    if (response.status === 403) {
+      throw new Error('Spotify Premium vereist voor deze functie.');
+    }
+    throw new Error(err.error?.message || 'Kon muziek niet starten.');
   }
 };

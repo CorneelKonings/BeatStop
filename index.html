@@ -9,7 +9,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         :root { --brand-primary: #1DB954; }
-        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #020617; color: #f8fafc; touch-action: manipulation; user-select: none; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #020617; color: #f8fafc; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
         .font-game { font-family: 'Bungee', cursive; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .playing-indicator::before { content: ''; position: absolute; inset: -20px; border-radius: 50%; border: 4px solid var(--brand-primary); animation: pulse-ring 1.25s infinite; }
@@ -18,14 +18,15 @@
         .snowflake { position: fixed; top: -10%; z-index: 1; animation: fall linear infinite; }
     </style>
     <script>
-      // Cruciaal: De Spotify SDK heeft deze globale functie nodig VOORDAT het script laadt
+      // Cruciaal: De Spotify SDK heeft deze globale functie nodig om te laten weten dat hij klaar is
       window.onSpotifyWebPlaybackSDKReady = () => {
+        console.log("Spotify SDK is ready to be initialized");
         window.spotifySDKReady = true;
-        // Event sturen naar de React app
         window.dispatchEvent(new Event('spotifySDKLoaded'));
       };
     </script>
-    <script src="https://sdk.scdn.co/spotify-player.js" async></script>
+    <!-- We laden het script met 'defer' zodat de handler hierboven zeker al bestaat -->
+    <script src="https://sdk.scdn.co/spotify-player.js" defer></script>
     <script type="importmap">
 {
   "imports": {
