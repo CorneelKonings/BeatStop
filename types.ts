@@ -8,8 +8,7 @@ export enum GameState {
 
 export enum Theme {
   STANDARD = 'STANDARD',
-  CHRISTMAS = 'CHRISTMAS',
-  CIRCUS = 'CIRCUS'
+  CHRISTMAS = 'CHRISTMAS'
 }
 
 export enum MusicMode {
@@ -26,7 +25,7 @@ export interface Track {
   id: string;
   name: string;
   artist: string;
-  previewUrl: string | null; // Dit wordt de Blob URL voor uploads
+  previewUrl: string | null; 
   albumArt: string;
   uri: string;
 }
@@ -41,5 +40,5 @@ export interface GameSettings {
   spotifyToken: string;
   shuffle: boolean;
   musicMode: MusicMode;
-  localTracks: Track[]; // Nieuwe opslag voor geüploade bestanden
+  localTracks: Track[]; 
 }

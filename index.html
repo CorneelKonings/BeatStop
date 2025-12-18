@@ -12,20 +12,96 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; overflow: hidden; background-color: #020617; color: #f8fafc; touch-action: manipulation; user-select: none; -webkit-tap-highlight-color: transparent; }
         .font-game { font-family: 'Bungee', cursive; }
         .glass { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
-        .playing-indicator::before { content: ''; position: absolute; inset: -20px; border-radius: 50%; border: 4px solid var(--brand-primary); animation: pulse-ring 1.25s infinite; }
-        @keyframes pulse-ring { 0% { transform: scale(0.33); opacity: 0; } 80%, 100% { opacity: 0; } }
+        
+        /* De Ultieme 3D Button Style met doorlopende lijnen (pootjes) */
+        .btn-3d-wrap {
+            position: relative;
+            background: none;
+            border: none;
+            padding: 0;
+            outline: none;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn-3d-top {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            outline: 2px solid #111;
+            transition: 0.1s;
+            position: relative;
+            z-index: 2;
+            overflow: hidden;
+            font-weight: 800;
+        }
+        .btn-3d-bottom {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 10px;
+            left: 0;
+            border-radius: 20px;
+            outline: 2px solid #111;
+            z-index: 1;
+        }
+        /* De pootjes van de knop - lopen nu echt tot boven door */
+        .btn-3d-bottom::before, .btn-3d-bottom::after {
+            position: absolute;
+            content: "";
+            width: 2px;
+            height: 20px; /* Hoog genoeg om de top layer te 'raken' */
+            background: #111;
+            top: -10px; /* Starten bovenaan de schaduwlaag */
+        }
+        .btn-3d-bottom::before { left: 15%; }
+        .btn-3d-bottom::after { left: 85%; }
+
+        .btn-3d-wrap:active .btn-3d-top {
+            transform: translateY(10px);
+        }
+        
+        .btn-3d-top::before {
+            position: absolute;
+            content: "";
+            width: 40px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: skewX(30deg);
+            left: -60px;
+            transition: 0.3s;
+        }
+        .btn-3d-wrap:active .btn-3d-top::before {
+            left: calc(100% + 60px);
+        }
+
+        /* Vinyl Glans-lijnen (Witte reflecties) */
+        .vinyl-white-glint {
+            background: conic-gradient(
+                from 0deg,
+                transparent 0%,
+                rgba(255,255,255,0.12) 8%,
+                transparent 15%,
+                transparent 45%,
+                rgba(255,255,255,0.12) 50%,
+                transparent 55%,
+                transparent 85%,
+                rgba(255,255,255,0.12) 92%,
+                transparent 100%
+            );
+        }
+        
         @keyframes fall { to { top: 110%; } }
-        .snowflake { position: fixed; top: -10%; z-index: 1; animation: fall linear infinite; }
+        .snowflake { position: fixed; top: -10%; z-index: 50; animation: fall linear infinite; color: white; }
     </style>
     <script>
-      // Cruciaal: De Spotify SDK heeft deze globale functie nodig om te laten weten dat hij klaar is
       window.onSpotifyWebPlaybackSDKReady = () => {
-        console.log("Spotify SDK is ready to be initialized");
         window.spotifySDKReady = true;
         window.dispatchEvent(new Event('spotifySDKLoaded'));
       };
     </script>
-    <!-- We laden het script met 'defer' zodat de handler hierboven zeker al bestaat -->
     <script src="https://sdk.scdn.co/spotify-player.js" defer></script>
     <script type="importmap">
 {
