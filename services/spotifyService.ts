@@ -3,8 +3,11 @@ import { Track, SpotifyUser } from '../types';
 
 export const parsePlaylistId = (url: string): string | null => {
   if (!url) return null;
+  // Regex die zowel de ID als eventuele query params aanpakt
   const match = url.match(/playlist[\/:]([a-zA-Z0-9]{22})/);
-  return match ? match[1] : null;
+  const id = match ? match[1] : null;
+  console.log('Parsed Playlist ID:', id, 'from URL:', url);
+  return id;
 };
 
 export const fetchUserProfile = async (token: string): Promise<SpotifyUser | null> => {
@@ -21,32 +24,35 @@ export const fetchUserProfile = async (token: string): Promise<SpotifyUser | nul
 
 export const fetchPlaylistTracks = async (playlistUrl: string, token: string): Promise<Track[]> => {
   const id = parsePlaylistId(playlistUrl);
-  
-  if (!id) {
-    throw new Error('Ongeldige Spotify link.');
-  }
+  if (!id) throw new Error('Ongeldige Spotify link.');
+
+  const endpoint = `https://api.spotify.com/v1/playlists/${id}/tracks?limit=50`;
+  console.log('Fetching tracks from:', endpoint);
 
   try {
-    const response = await fetch(`https://api.spotify.com/v1/playlists/${id}/tracks?limit=50`, {
+    const response = await fetch(endpoint, {
       headers: { 
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json'
       }
     });
     
-    if (response.status === 401) throw new Error('Sessie verlopen.');
-    if (!response.ok) throw new Error('Kon playlist niet laden.');
+    if (response.status === 404) {
+      throw new Error(`Playlist niet gevonden (404). Check of de link openbaar is.`);
+    }
+    if (response.status === 401) throw new Error('Sessie verlopen. Log opnieuw in.');
+    if (!response.ok) throw new Error(`Spotify Error: ${response.status}`);
 
     const data = await response.json();
-    
-    // We filteren niet meer op preview_url, want we gaan de volledige URI afspelen via de SDK.
+    if (!data.items || data.items.length === 0) throw new Error('Geen nummers gevonden in deze playlist.');
+
     return data.items
       .filter((item: any) => item.track && item.track.id)
       .map((item: any) => ({
         id: item.track.id,
         name: item.track.name,
         artist: item.track.artists.map((a: any) => a.name).join(', '),
-        previewUrl: item.track.preview_url, // fallback
+        previewUrl: item.track.preview_url,
         albumArt: item.track.album.images[0]?.url || `https://picsum.photos/seed/${item.track.id}/400/400`,
         uri: item.track.uri
       }));
@@ -56,11 +62,8 @@ export const fetchPlaylistTracks = async (playlistUrl: string, token: string): P
   }
 };
 
-/**
- * Start een specifieke track op een specifiek apparaat (de SDK player)
- */
 export const playTrackOnDevice = async (token: string, deviceId: string, trackUri: string) => {
-  await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+  const response = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
     method: 'PUT',
     body: JSON.stringify({ uris: [trackUri] }),
     headers: {
@@ -68,4 +71,9 @@ export const playTrackOnDevice = async (token: string, deviceId: string, trackUr
       'Authorization': `Bearer ${token}`
     },
   });
+  if (!response.ok) {
+    const err = await response.json();
+    console.error('Play Request Failed:', err);
+    if (err.error?.status === 403) throw new Error('Spotify Premium vereist.');
+  }
 };
