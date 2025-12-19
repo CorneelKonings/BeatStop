@@ -27,6 +27,34 @@ const GameView: React.FC<Props> = ({ settings, onExit, setSettings }) => {
   const stopTimerRef = useRef<any>(null);
   const progressIntervalRef = useRef<any>(null);
 
+  const stopMusic = useCallback(async () => {
+    if (settings.musicMode === MusicMode.SPOTIFY_PREMIUM && player) {
+      await player.pause();
+    } else if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    
+    if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    
+    // Alleen sirene afspelen als we nog in de game zitten
+    new Audio('https://actions.google.com/sounds/v1/emergency/emergency_siren_short_burst.ogg').play().catch(() => {});
+    setGameState(GameState.PAUSED_MANUAL);
+  }, [player, settings.musicMode]);
+
+  const handleExit = useCallback(async () => {
+    // Stop muziek volledig bij verlaten
+    if (settings.musicMode === MusicMode.SPOTIFY_PREMIUM && player) {
+      await player.pause();
+    } else if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+    }
+    if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
+    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
+    onExit();
+  }, [player, settings.musicMode, onExit]);
+
   const setupSpotifyPlayer = useCallback(() => {
     if (settings.musicMode !== MusicMode.SPOTIFY_PREMIUM) return;
     if (!(window as any).Spotify || !settings.spotifyToken || player) return;
@@ -50,7 +78,7 @@ const GameView: React.FC<Props> = ({ settings, onExit, setSettings }) => {
 
     newPlayer.connect();
     setPlayer(newPlayer);
-  }, [settings, player]);
+  }, [settings.musicMode, settings.spotifyToken, player]);
 
   useEffect(() => {
     if (settings.musicMode === MusicMode.SPOTIFY_PREMIUM) {
@@ -81,18 +109,13 @@ const GameView: React.FC<Props> = ({ settings, onExit, setSettings }) => {
     loadTracks();
   }, [settings]);
 
-  const stopMusic = useCallback(async () => {
-    if (settings.musicMode === MusicMode.SPOTIFY_PREMIUM && player) {
-      await player.pause();
-    } else if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    
-    if (stopTimerRef.current) clearTimeout(stopTimerRef.current);
-    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-    new Audio('https://actions.google.com/sounds/v1/emergency/emergency_siren_short_burst.ogg').play().catch(() => {});
-    setGameState(GameState.PAUSED_MANUAL);
-  }, [player, settings.musicMode]);
+  const skipTrack = useCallback(() => {
+    const next = (currentTrackIndex + 1) % tracks.length;
+    setCurrentTrackIndex(next);
+    setGameState(GameState.IDLE);
+    setProgress(0);
+    if (audioRef.current) audioRef.current.pause();
+  }, [currentTrackIndex, tracks.length]);
 
   const startMusic = useCallback(async () => {
     if (!tracks.length) return;
@@ -127,15 +150,7 @@ const GameView: React.FC<Props> = ({ settings, onExit, setSettings }) => {
     } catch (e: any) {
       setError(e.message);
     }
-  }, [deviceId, tracks, currentTrackIndex, gameState, settings, player, stopMusic]);
-
-  const skipTrack = useCallback(() => {
-    const next = (currentTrackIndex + 1) % tracks.length;
-    setCurrentTrackIndex(next);
-    setGameState(GameState.IDLE);
-    setProgress(0);
-    if (audioRef.current) audioRef.current.pause();
-  }, [currentTrackIndex, tracks.length]);
+  }, [deviceId, tracks, currentTrackIndex, gameState, settings, player, stopMusic, skipTrack]);
 
   const getThemeConfig = () => {
     switch(settings.theme) {
@@ -148,10 +163,6 @@ const GameView: React.FC<Props> = ({ settings, onExit, setSettings }) => {
   const track = tracks[currentTrackIndex];
   const hasRealArt = track?.albumArt && !track.albumArt.includes('picsum.photos');
 
-  // TOONARM BEWEGING:
-  // Idle: 70 graden (ver buiten de plaat)
-  // Progress 0 (Buitenrand van de groeven): 48 graden
-  // Progress 1 (Vlakbij het label/midden): 18 graden
   const armRotation = gameState === GameState.PLAYING 
     ? 48 - (progress * 30) 
     : 70;
@@ -159,13 +170,14 @@ const GameView: React.FC<Props> = ({ settings, onExit, setSettings }) => {
   if (isLoadingTracks) return <div className="h-full flex items-center justify-center bg-slate-950 font-game italic text-2xl animate-pulse text-white">BEATS LADEN...</div>;
 
   return (
-    <div className={`flex flex-col h-full transition-all duration-1000 ${theme.bg} relative overflow-hidden`}>
+    <div className={`flex flex-col h-full transition-all duration-1000 ${theme.bg} relative overflow-hidden landscape:flex-row`}>
       {settings.theme === Theme.CHRISTMAS && <Snowfall isPaused={gameState !== GameState.PLAYING} />}
       
-      <div className="p-6 flex items-center justify-between z-20">
-        <button onClick={onExit} className="p-3 bg-black/40 rounded-2xl border border-white/10 active:scale-90"><ChevronLeft className="w-8 h-8 text-white" /></button>
+      {/* Header / Nav (Verplaatst in landscape) */}
+      <div className="p-6 flex items-center justify-between z-20 landscape:absolute landscape:top-0 landscape:left-0 landscape:w-full">
+        <button onClick={handleExit} className="p-3 bg-black/40 rounded-2xl border border-white/10 active:scale-90"><ChevronLeft className="w-8 h-8 text-white" /></button>
         <div className="flex flex-col items-center">
-          <h2 className="font-game text-2xl text-white italic leading-none tracking-tighter">BEATSTOP</h2>
+          <h2 className="font-game text-2xl text-white italic leading-none tracking-tighter landscape:text-xl">BEATSTOP</h2>
           <span className="text-[7px] font-black uppercase tracking-[0.3em] text-slate-400 flex items-center gap-1 mt-1">
              {settings.musicMode === MusicMode.SPOTIFY_PREMIUM ? <Crown className="w-2 h-2 text-green-500" /> : <Upload className="w-2 h-2 text-purple-500" />}
              {settings.musicMode === MusicMode.SPOTIFY_PREMIUM ? 'Premium' : 'Lokaal'}
@@ -174,24 +186,27 @@ const GameView: React.FC<Props> = ({ settings, onExit, setSettings }) => {
         <button onClick={skipTrack} className="p-3 bg-black/40 rounded-2xl border border-white/10 active:scale-90"><SkipForward className="w-6 h-6 text-white" /></button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center p-8 z-10 text-center relative">
-        <div className="relative group perspective-1000">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col items-center justify-center p-4 z-10 text-center relative landscape:p-12 landscape:flex-row landscape:gap-12">
+        
+        {/* Record Side */}
+        <div className="relative group perspective-1000 flex items-center justify-center">
           
-          {/* TOONARM - Gefixt: pivot boven-rechts, beweegt van buiten (48deg) naar binnen (18deg) */}
+          {/* TOONARM */}
           <div 
-            className="absolute -right-24 -top-16 w-48 h-64 z-40 transition-all duration-1000 origin-top-right transform pointer-events-none"
+            className="absolute -right-16 -top-12 w-40 h-56 z-40 transition-all duration-1000 origin-top-right transform pointer-events-none landscape:-right-10"
             style={{ transform: `rotate(${armRotation}deg)` }}
           >
-             <div className="absolute right-4 top-4 w-14 h-14 bg-slate-800 rounded-full border-4 border-slate-700 shadow-xl" />
-             <div className="absolute right-10 top-12 w-3 h-[85%] bg-gradient-to-b from-slate-300 via-slate-500 to-slate-400 rounded-full shadow-lg origin-top">
-                <div className="absolute -bottom-4 -left-3 w-10 h-14 bg-slate-900 rounded-sm border border-slate-700 shadow-md transform rotate-[-10deg]">
-                   <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-3 bg-slate-300 rounded-full" />
+             <div className="absolute right-4 top-4 w-12 h-12 bg-slate-800 rounded-full border-4 border-slate-700 shadow-xl" />
+             <div className="absolute right-10 top-12 w-2 h-[80%] bg-gradient-to-b from-slate-300 via-slate-500 to-slate-400 rounded-full shadow-lg origin-top">
+                <div className="absolute -bottom-4 -left-3 w-8 h-12 bg-slate-900 rounded-sm border border-slate-700 shadow-md transform rotate-[-10deg]">
+                   <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1 h-3 bg-slate-300 rounded-full" />
                 </div>
              </div>
           </div>
 
           {/* DE PLAAT */}
-          <div className={`relative w-80 h-80 md:w-96 md:h-96 rounded-full shadow-[0_0_150px_rgba(0,0,0,1)] transition-all duration-1000 transform ${gameState === GameState.PLAYING ? 'scale-105' : 'scale-95 grayscale-[0.2]'}`}>
+          <div className={`relative w-72 h-72 md:w-80 md:h-80 lg:w-96 lg:h-96 rounded-full shadow-[0_0_150px_rgba(0,0,0,1)] transition-all duration-1000 transform ${gameState === GameState.PLAYING ? 'scale-105' : 'scale-95 grayscale-[0.2]'}`}>
             <div className={`absolute -inset-10 rounded-full blur-[80px] transition-opacity duration-1000 ${gameState === GameState.PLAYING ? 'opacity-100' : 'opacity-0'} ${theme.glow}`} />
 
             <div 
@@ -203,42 +218,56 @@ const GameView: React.FC<Props> = ({ settings, onExit, setSettings }) => {
                 `
               }}
             >
-              {/* WITTE GLANS STREPEN */}
               <div className="absolute inset-0 vinyl-white-glint pointer-events-none z-10 opacity-80" />
 
-              {/* Center Label */}
               <div className={`relative w-[34%] h-[34%] rounded-full overflow-hidden border-[6px] border-[#0a0a0a] z-20 shadow-[0_0_20px_rgba(0,0,0,1)] transition-transform duration-500 ${gameState === GameState.PLAYING ? 'scale-100' : 'scale-95'}`}>
                 {hasRealArt ? (
                   <img src={track.albumArt} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full bg-[#050505] flex flex-col items-center justify-center p-2 text-center">
-                    <MusicIcon className={`w-6 h-6 ${theme.accent} mb-1 opacity-40`} />
+                    <MusicIcon className={`w-5 h-5 ${theme.accent} mb-1 opacity-40`} />
                     <span className="text-[5px] font-black uppercase text-slate-700 leading-tight tracking-[0.2em]">BEATSTOP<br/>EDITION</span>
                   </div>
                 )}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                   <div className="w-3 h-3 bg-[#0a0a0a] rounded-full border border-white/10 shadow-inner" />
+                   <div className="w-2.5 h-2.5 bg-[#0a0a0a] rounded-full border border-white/10 shadow-inner" />
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* BEAT / STOP TEKST (WIT) */}
-        <div className="mt-16 h-36 flex flex-col items-center justify-start overflow-visible">
-          <div className="relative">
-             <span className={`font-game text-8xl italic text-white transition-all duration-300 block drop-shadow-[0_0_30px_rgba(255,255,255,0.6)] ${gameState === GameState.PLAYING ? 'opacity-100 translate-y-0 scale-110' : 'opacity-0 -translate-y-4 scale-90'}`}>BEAT</span>
-             <span className={`font-game text-8xl italic text-white transition-all duration-300 absolute inset-0 text-center drop-shadow-[0_0_40px_rgba(255,0,0,0.5)] ${gameState === GameState.PAUSED_MANUAL ? 'opacity-100 translate-y-0 scale-105' : 'opacity-0 translate-y-4 scale-125'}`}>STOP</span>
+        {/* Info Side */}
+        <div className="mt-8 flex flex-col items-center justify-center landscape:mt-0 landscape:items-start landscape:text-left landscape:flex-1">
+          <div className="h-32 flex flex-col items-center justify-start overflow-visible landscape:items-start landscape:h-auto">
+            <div className="relative">
+               <span className={`font-game text-7xl italic text-white transition-all duration-300 block drop-shadow-[0_0_30px_rgba(255,255,255,0.6)] landscape:text-6xl ${gameState === GameState.PLAYING ? 'opacity-100 translate-y-0 scale-110' : 'opacity-0 -translate-y-4 scale-90'}`}>BEAT</span>
+               <span className={`font-game text-7xl italic text-white transition-all duration-300 absolute inset-0 text-center drop-shadow-[0_0_40px_rgba(255,0,0,0.5)] landscape:text-6xl landscape:text-left ${gameState === GameState.PAUSED_MANUAL ? 'opacity-100 translate-y-0 scale-105' : 'opacity-0 translate-y-4 scale-125'}`}>STOP</span>
+            </div>
+            
+            <div className={`mt-4 transition-all duration-700 transform ${gameState === GameState.PLAYING ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-4'}`}>
+                <p className="text-white font-bold text-lg leading-tight truncate max-w-[280px] mx-auto uppercase tracking-tighter landscape:mx-0 landscape:max-w-md">{track?.name || 'Klaar voor de start'}</p>
+                <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mt-2 opacity-60 leading-none">{track?.artist || 'BeatStop Console'}</p>
+            </div>
           </div>
-          
-          <div className={`mt-6 transition-all duration-700 transform ${gameState === GameState.PLAYING ? 'opacity-100 translate-y-0' : 'opacity-40 translate-y-4'}`}>
-              <p className="text-white font-bold text-lg leading-tight truncate max-w-[280px] mx-auto uppercase tracking-tighter">{track?.name || 'Klaar voor de start'}</p>
-              <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.4em] mt-2 opacity-60 leading-none">{track?.artist || 'BeatStop Console'}</p>
+
+          <div className="hidden landscape:block mt-8 w-full">
+            <button 
+              onClick={startMusic} 
+              disabled={gameState === GameState.PLAYING}
+              className={`btn-3d-wrap w-full max-w-sm h-20 transition-opacity duration-300 ${gameState === GameState.PLAYING ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            >
+              <div className="btn-3d-top bg-white text-black font-game text-2xl italic uppercase flex items-center justify-center gap-4">
+                <Play className="fill-current w-6 h-6" /> START BEAT
+              </div>
+              <div className="btn-3d-bottom bg-slate-300" />
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="p-10 z-20 pb-24 flex justify-center">
+      {/* Button Side (Portrait default) */}
+      <div className="p-8 z-20 pb-20 flex justify-center landscape:hidden">
         <button 
           onClick={startMusic} 
           disabled={gameState === GameState.PLAYING}
@@ -261,6 +290,13 @@ const GameView: React.FC<Props> = ({ settings, onExit, setSettings }) => {
         }
         .perspective-1000 {
           perspective: 1000px;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}</style>
     </div>
